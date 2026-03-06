@@ -21,6 +21,7 @@ from crawlers import arxiv_crawler, conference_crawler
 from parsers.keyword_filter import filter_and_score, score_paper
 from storage.db import PaperDB
 from exporters import to_html, to_markdown
+from summarizers import claude_summarizer
 
 logging.basicConfig(
     level=logging.INFO,
@@ -81,6 +82,10 @@ def run(args):
         p["score"] = score_paper(p, config)
     db.rescore_all(all_db_papers)
 
+    if not args.skip_summarize:
+        logger.info("=== Summarizing papers (full PDF via Claude Haiku) ===")
+        claude_summarizer.run(db, config)
+
     logger.info("=== Loading from DB ===")
     papers = db.load_all()
     db.close()
@@ -108,8 +113,14 @@ def main():
     parser.add_argument("--arxiv-only", action="store_true", help="Only crawl arXiv")
     parser.add_argument("--conf-only", action="store_true", help="Only crawl conferences")
     parser.add_argument("--export-only", action="store_true", help="Skip crawl, re-export from DB")
+    parser.add_argument("--summarize-only", action="store_true", help="Skip crawl, only run summarizer then export")
+    parser.add_argument("--skip-summarize", action="store_true", help="Skip summarization step")
     parser.add_argument("--min-score", type=int, default=None, help="Minimum relevance score")
     args = parser.parse_args()
+
+    # --summarize-only implies --export-only for the crawl step
+    if args.summarize_only:
+        args.export_only = True
 
     if args.arxiv_only and args.conf_only:
         print("Error: --arxiv-only and --conf-only cannot be used together.")

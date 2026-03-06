@@ -45,6 +45,11 @@ class PaperDB:
         self.conn.execute(
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_title ON papers(title)"
         )
+        # Add summary column if this is an older DB that predates it
+        try:
+            self.conn.execute("ALTER TABLE papers ADD COLUMN summary TEXT")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
         self.conn.commit()
         logger.info(f"DB opened: {db_path}")
 
@@ -81,6 +86,24 @@ class PaperDB:
             )
         logger.info(f"DB: rescored {len(rows)} existing papers")
         return len(rows)
+
+    def papers_needing_summary(self) -> List[Dict]:
+        """Return papers that have no summary yet (empty or NULL)."""
+        cursor = self.conn.execute(
+            "SELECT * FROM papers WHERE summary IS NULL OR summary = '' ORDER BY score DESC"
+        )
+        result = []
+        for row in cursor.fetchall():
+            d = dict(row)
+            d["authors"] = json.loads(d["authors"] or "[]")
+            result.append(d)
+        return result
+
+    def update_summary(self, title: str, summary: str) -> None:
+        with self.conn:
+            self.conn.execute(
+                "UPDATE papers SET summary = ? WHERE title = ?", (summary, title)
+            )
 
     def existing_titles(self) -> set:
         """Return a set of lowercased titles already in the DB."""

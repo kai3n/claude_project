@@ -18,7 +18,7 @@ from pathlib import Path
 import yaml
 
 from crawlers import arxiv_crawler, conference_crawler
-from parsers.keyword_filter import filter_and_score
+from parsers.keyword_filter import filter_and_score, score_paper
 from storage.db import PaperDB
 from exporters import to_html, to_markdown
 
@@ -74,6 +74,12 @@ def run(args):
 
         logger.info("=== Saving to DB ===")
         db.save(scored)
+
+    logger.info("=== Rescoring all DB papers with current logic ===")
+    all_db_papers = db.load_all()
+    for p in all_db_papers:
+        p["score"] = score_paper(p, config)
+    db.rescore_all(all_db_papers)
 
     logger.info("=== Loading from DB ===")
     papers = db.load_all()

@@ -72,6 +72,16 @@ class PaperDB:
         logger.info(f"DB: inserted {inserted} new papers (attempted {len(rows)})")
         return inserted
 
+    def rescore_all(self, papers: List[Dict]) -> int:
+        """Update scores for all papers already in the DB using new scoring logic."""
+        rows = [(p["score"], p["title"]) for p in papers if "score" in p]
+        with self.conn:
+            self.conn.executemany(
+                "UPDATE papers SET score = ? WHERE title = ?", rows
+            )
+        logger.info(f"DB: rescored {len(rows)} existing papers")
+        return len(rows)
+
     def existing_titles(self) -> set:
         """Return a set of lowercased titles already in the DB."""
         cursor = self.conn.execute("SELECT title FROM papers")

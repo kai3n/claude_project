@@ -213,7 +213,7 @@ function renderList() {
     const srcTag = p.source === 'arxiv'
       ? '<span class="tag tag-arxiv">arXiv</span>'
       : '<span class="tag tag-conf">Conference</span>';
-    const vTag   = `<span class="tag tag-venue">${esc(p.venue)}</span>`;
+    const vTag   = p.source !== 'arxiv' ? `<span class="tag tag-venue">${esc(p.venue)}</span>` : '';
     const yTag   = p.year ? `<span class="tag tag-year">${p.year}</span>` : '';
     const sTag   = `<span class="tag tag-score">score ${p.score}</span>`;
 
